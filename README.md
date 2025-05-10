@@ -69,7 +69,7 @@ cd kafka-pubsub-system
 
 2. Start the system:
 ```sh
-docker-compose up --build
+docker-compose up -d --build
 ```
 
 3. Access the Kafka UI at http://localhost:8080 to monitor topics and messages.
@@ -78,6 +78,8 @@ docker-compose up --build
 ```sh
 docker-compose down
 ```
+
+Or use Ctrl + C if the `-d` option was not involved in the original building.
 
 ### Day-to-day Operations
 

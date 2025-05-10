@@ -1,6 +1,9 @@
-version: '3'
+version: '3.8'  # Using a more recent compose file version for better feature support
 
 services:
+  # --------------------------------
+  # ZOOKEEPER SERVICE
+  # --------------------------------
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
     container_name: zookeeper
@@ -9,12 +12,48 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
+    # IMPROVEMENT 1: Data Persistence with Volumes
+    # Ensure Zookeeper data persists across container restarts
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+      - zookeeper-logs:/var/lib/zookeeper/log
+    # IMPROVEMENT 2: Health Checks
+    # Ensure dependent services only start when Zookeeper is truly ready
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 2181 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    # IMPROVEMENT 3: Restart Policy
+    # Automatically restart the container if it crashes
+    restart: unless-stopped
+    # IMPROVEMENT 4: Resource Constraints
+    # Prevent container from consuming excessive resources
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    # IMPROVEMENT 5: Network Isolation
+    # Isolate containers in a dedicated network for better security
+    networks:
+      - kafka-network
 
+  # --------------------------------
+  # KAFKA SERVICE
+  # --------------------------------
   kafka:
     image: confluentinc/cp-kafka:latest
     container_name: kafka
     depends_on:
-      - zookeeper
+      # IMPROVEMENT 6: Dependent Service Health
+      # Only start when Zookeeper is healthy, not just when it's running
+      zookeeper:
+        condition: service_healthy
     ports:
       - "9092:9092"
     environment:
@@ -24,40 +63,144 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      # IMPROVEMENT 7: Kafka Performance Tuning
+      # Optimize Kafka for better performance
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_LOG_RETENTION_HOURS: 72
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    # IMPROVEMENT 8: Data Persistence with Volumes
+    # Ensure Kafka data persists across container restarts
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    # IMPROVEMENT 9: Health Check for Kafka
+    # Verify Kafka is truly ready for connections
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    networks:
+      - kafka-network
 
+  # --------------------------------
+  # KAFKA UI SERVICE
+  # --------------------------------
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
     depends_on:
-      - kafka
+      # IMPROVEMENT 10: Dependent Service Health
+      # Only start UI when Kafka is truly ready
+      kafka:
+        condition: service_healthy
     ports:
       - "8080:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    # IMPROVEMENT 11: Add Restart Policy to UI
+    # Ensure UI restarts automatically if it crashes
+    restart: unless-stopped
+    # IMPROVEMENT 12: Resource Constraints for UI
+    # Prevent UI container from consuming excessive resources
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    networks:
+      - kafka-network
 
+  # --------------------------------
+  # POLICY PRODUCER SERVICE
+  # --------------------------------
   policy-producer:
     build:
       context: .
       dockerfile: producer/Dockerfile
     container_name: policy-producer
     depends_on:
-      - kafka
+      # IMPROVEMENT 13: Keep this dependency on Kafka's health
+      kafka:
+        condition: service_healthy
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KAFKA_TOPIC: policy-events
       BATCH_SIZE: 10
       INTERVAL_SECONDS: 5
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 256M
+    networks:
+      - kafka-network
 
+  # --------------------------------
+  # POLICY CONSUMER SERVICE
+  # --------------------------------
   policy-consumer:
     build:
       context: .
       dockerfile: consumer/Dockerfile
     container_name: policy-consumer
     depends_on:
-      - kafka
-      - policy-producer
+    # IMPROVEMENT 14: Keep this dependency on Kafka's health
+      kafka:
+        condition: service_healthy
+      policy-producer:
+        condition: service_started
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KAFKA_TOPIC: policy-events
       CONSUMER_GROUP: policy-processor
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 256M
+    networks:
+      - kafka-network
+
+# --------------------------------
+# PERSISTENT VOLUMES
+# --------------------------------
+# IMPROVEMENT 15: Define Named Volumes
+# Creates persistent storage that survives container restarts
+volumes:
+  zookeeper-data:
+    # Data volume for Zookeeper to persist cluster state information
+  zookeeper-logs:
+    # Log volume for Zookeeper to persist transaction logs
+  kafka-data:
+    # Data volume for Kafka to persist message storage
+
+# --------------------------------
+# CUSTOM NETWORK
+# --------------------------------
+# IMPROVEMENT 18: Custom Network Configuration
+# Isolates containers within a dedicated network for better security
+networks:
+  kafka-network:
+    driver: bridge
