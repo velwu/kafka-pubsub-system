@@ -2,6 +2,12 @@
 
 A containerized pub/sub system using Kafka and Python, designed to simulate an insurance company's policy event processing pipeline.
 
+🔄 Event-driven architecture showcasing real-time insurance data processing
+🐳 Fully containerized with Docker and Docker Compose
+🐍 Clean Python implementation with proper error handling
+📊 Includes statistics tracking and monitoring capabilities
+📝 Realistic insurance policy data model
+
 ## System Overview
 
 This system demonstrates a simple but realistic pub/sub architecture for processing insurance policy events:
