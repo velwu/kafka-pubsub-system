@@ -1,0 +1,53 @@
+# Python-specific
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.env
+
+# IDE-specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+.ipynb_checkpoints
+
+# Docker-specific
+.docker/
+
+# Kafka and application data
+kafka-data/
+zookeeper-data/
+data/
+logs/
+
+# Compiled Java/Scala (if any Kafka clients use these)
+*.class
+*.jar
+target/
+
+# Temporary files
+*.log
+*.tmp
