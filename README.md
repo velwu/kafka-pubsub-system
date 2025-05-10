@@ -79,6 +79,62 @@ docker-compose up --build
 docker-compose down
 ```
 
+### Day-to-day Operations
+
+For ongoing development and maintenance, these commands will be useful:
+
+Start the system (after initial build). Add -d flag to run in detached mode (background):
+
+```sh
+docker-compose up -d
+```
+
+View logs (when running in detached mode):
+```sh
+docker-compose logs -f
+```
+
+To view logs for a specific service:
+```sh
+docker-compose logs -f policy-producer
+```
+
+Stop containers (without removing them):
+```sh
+docker-compose stop
+```
+
+Restart stopped containers:
+```sh
+docker-compose start
+```
+
+Pause data generation (while keeping Kafka running):
+```sh
+docker stop policy-producer
+```
+
+And to resume:
+```sh
+docker start policy-producer
+```
+
+Rebuild and restart a specific service (after code changes):
+```sh
+docker-compose up --build policy-producer
+```
+
+Stop and remove containers:
+```sh
+docker-compose down
+```
+
+⚠️ Warning: This action below will delete all stored data.
+Full cleanup (remove all data, including volumes):
+```sh
+docker-compose down -v
+```
+
 ---
 
 ## Configuration
