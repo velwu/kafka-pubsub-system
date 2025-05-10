@@ -199,7 +199,7 @@ volumes:
 # --------------------------------
 # CUSTOM NETWORK
 # --------------------------------
-# IMPROVEMENT 18: Custom Network Configuration
+# IMPROVEMENT 16: Custom Network Configuration
 # Isolates containers within a dedicated network for better security
 networks:
   kafka-network:
