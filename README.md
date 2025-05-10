@@ -53,13 +53,13 @@ The system processes insurance policy events with the following structure:
 }
 ```
 
-Getting Started
-Prerequisites
+## Getting Started
 
+### Prerequisites
 Docker and Docker Compose
 Git
 
-Running the System
+### Running the System
 
 1. Clone the repository:
 ```sh
