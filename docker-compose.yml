@@ -65,9 +65,18 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       # IMPROVEMENT 7: Kafka Performance Tuning
       # Optimize Kafka for better performance
-      KAFKA_NUM_PARTITIONS: 3
-      KAFKA_LOG_RETENTION_HOURS: 72
+      KAFKA_NUM_PARTITIONS: 12  # Increased from 3 to allow more parallel consumers
+      KAFKA_LOG_RETENTION_HOURS: 1  # Reduced from 72 for faster retention demos
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      # OPTIMIZATION: Additional Performance Settings
+      # Enhance throughput and parallel processing capabilities
+      KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 60000  # Check retention every minute
+      KAFKA_NUM_IO_THREADS: 8  # Increase I/O threads for better performance
+      KAFKA_NUM_NETWORK_THREADS: 8  # More network threads for handling connections
+      KAFKA_SOCKET_RECEIVE_BUFFER_BYTES: 1048576  # 1MB receive buffer
+      KAFKA_SOCKET_SEND_BUFFER_BYTES: 1048576  # 1MB send buffer
+      KAFKA_COMPRESSION_TYPE: 'producer'  # Let producers decide compression
+      KAFKA_MESSAGE_MAX_BYTES: 1000012  # ~1MB max message size
     # IMPROVEMENT 8: Data Persistence with Volumes
     # Ensure Kafka data persists across container restarts
     volumes:
@@ -139,17 +148,24 @@ services:
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KAFKA_TOPIC: policy-events
-      BATCH_SIZE: 10
+      BATCH_SIZE: 100  # Increased from 10 for better throughput
       INTERVAL_SECONDS: 5
+      # OPTIMIZATION: Producer Performance Settings
+      # Enable multiprocessing and batching optimizations
+      PRODUCER_PROCESSES: 4  # Number of parallel processes for CPU-bound work
+      EVENTS_PER_PROCESS: 1000  # Events each process generates
+      LINGER_MS: 10  # Wait 10ms to batch messages together
+      COMPRESSION_TYPE: 'snappy'  # Fast compression for better throughput
+      ENABLE_MULTIPROCESSING: 'true'  # Toggle for demo purposes
     restart: unless-stopped
     deploy:
       resources:
         limits:
-          cpus: '0.5'
-          memory: 512M
+          cpus: '2'  # Increased from 0.5 to support multiprocessing
+          memory: 1G  # Increased from 512M for parallel processes
         reservations:
-          cpus: '0.1'
-          memory: 256M
+          cpus: '1'  # Increased from 0.1
+          memory: 512M  # Increased from 256M
     networks:
       - kafka-network
 
@@ -171,17 +187,54 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KAFKA_TOPIC: policy-events
       CONSUMER_GROUP: policy-processor
+      # OPTIMIZATION: Consumer Performance Settings
+      # Support I/O parallelism and batch processing
+      MAX_POLL_RECORDS: 500  # Increase batch size for processing
+      BATCH_SIZE: 500  # Increased from 100
+      POLL_TIMEOUT_MS: 100  # Reduced from 1000 for faster response
+      THREAD_POOL_SIZE: 20  # Thread pool for parallel I/O operations
+      CONNECTION_POOL_SIZE: 30  # Database connection pool size
+      ENABLE_THREADING: 'true'  # Toggle for demo purposes
+      # Scaling support
+      MAX_CONSUMERS: 12  # Match partition count for maximum parallelism
     restart: unless-stopped
     deploy:
       resources:
         limits:
-          cpus: '0.5'
-          memory: 512M
+          cpus: '1'  # Increased from 0.5 for threading
+          memory: 1G  # Increased from 512M for connection pools
         reservations:
-          cpus: '0.1'
-          memory: 256M
+          cpus: '0.5'  # Increased from 0.1
+          memory: 512M  # Increased from 256M
+      # OPTIMIZATION: Enable horizontal scaling
+      # Uncomment to run multiple consumer instances
+      # replicas: 3  # Run 3 consumer instances
     networks:
       - kafka-network
+
+# ========================================
+# SCALING NOTES:
+# Current: Single instance with 0.5 CPU (50% of one core)
+# 
+# For production scaling:
+# 1. Vertical: Increase CPU/memory limits
+#    - cpus: '4' (use up to 4 cores)
+#    - memory: 4G
+# 
+# 2. Horizontal: Add replicas
+#    - deploy.replicas: 5
+#    - Each replica gets its own CPU allocation
+# 
+# 3. Combined approach:
+#    - 10 replicas × 2 CPUs = 20 total cores
+#    - Better fault tolerance
+#
+# OPTIMIZATION SCALING:
+# - Producer: 2 CPUs for multiprocessing (4 processes)
+# - Consumer: 1 CPU with threading for I/O parallelism
+# - Kafka: 12 partitions allow up to 12 parallel consumers
+# - Use: docker-compose up -d --scale policy-consumer=12
+# ========================================
 
 # --------------------------------
 # PERSISTENT VOLUMES
