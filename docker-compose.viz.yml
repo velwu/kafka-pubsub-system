@@ -1,0 +1,65 @@
+# docker-compose.viz.yml
+# Extended compose file that adds visualization capabilities
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.viz.yml up
+
+version: '3.8'
+
+services:
+  # --------------------------------
+  # GARMIN ANALYTICS VISUALIZER
+  # --------------------------------
+  garmin-visualizer:
+    build:
+      context: .
+      dockerfile: visualizer/Dockerfile
+    container_name: garmin-visualizer
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      KAFKA_TOPIC: garmin-activity-stream
+      CONSUMER_GROUP: garmin-visualizer
+      DASHBOARD_UPDATE_INTERVAL: 10  # Update leaderboards every 10 seconds
+      EXPORT_INTERVAL: 60  # Generate visualizations every minute
+      OUTPUT_DIR: /app/visualizations
+    volumes:
+      # Mount local directory to access generated visualizations
+      - ./visualizations:/app/visualizations
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    networks:
+      - kafka-network
+
+  # --------------------------------
+  # OPTIONAL: JUPYTER NOTEBOOK
+  # --------------------------------
+  # For interactive data analysis and custom visualizations
+  jupyter:
+    image: jupyter/datascience-notebook:latest
+    container_name: garmin-jupyter
+    ports:
+      - "8888:8888"
+    environment:
+      JUPYTER_ENABLE_LAB: "yes"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    volumes:
+      - ./notebooks:/home/jovyan/work
+      - ./visualizations:/home/jovyan/visualizations
+      - ./models:/home/jovyan/models
+    command: start-notebook.sh --NotebookApp.token='' --NotebookApp.password=''
+    networks:
+      - kafka-network
+    profiles:
+      - analytics  # Only start when explicitly requested
+
+networks:
+  kafka-network:
+    driver: bridge

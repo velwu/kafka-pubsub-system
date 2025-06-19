@@ -51,3 +51,9 @@ target/
 # Temporary files
 *.log
 *.tmp
+
+# Visualizations
+visualizations/*.png
+visualizations/*.pdf
+visualizations/*.html
+visualizations/*.csv
